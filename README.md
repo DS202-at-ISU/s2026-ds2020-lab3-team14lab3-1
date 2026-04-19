@@ -1,4 +1,3 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/LEAcVKPz)
 
 <!-- README.md is generated from README.Rmd. Please edit the README.Rmd file -->
 
@@ -95,6 +94,106 @@ possible.
 Make sure to include the code to derive the (numeric) fact for the
 statement
 
+``` r
+library(tidyverse)
+```
+
+    ## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+    ## ✔ dplyr     1.1.4     ✔ readr     2.1.6
+    ## ✔ forcats   1.0.1     ✔ stringr   1.6.0
+    ## ✔ ggplot2   4.0.1     ✔ tibble    3.3.1
+    ## ✔ lubridate 1.9.4     ✔ tidyr     1.3.2
+    ## ✔ purrr     1.2.1     
+    ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ✖ dplyr::filter() masks stats::filter()
+    ## ✖ dplyr::lag()    masks stats::lag()
+    ## ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+``` r
+library(readr)
+
+# deaths
+deaths <- av %>%
+  select(Name.Alias, starts_with("Death")) %>%
+  pivot_longer(
+    cols = starts_with("Death"),
+    names_to = "Time",
+    values_to = "Death"
+  ) %>%
+  mutate(
+    Time = parse_number(Time),
+    Death = case_when(
+      Death == "YES" ~ "yes",
+      Death == "NO"  ~ "no",
+      TRUE ~ ""
+    ),
+    Death = factor(Death, levels = c("yes", "no", ""))
+  )
+
+head(deaths)
+```
+
+    ## # A tibble: 6 × 3
+    ##   Name.Alias                     Time Death
+    ##   <chr>                         <dbl> <fct>
+    ## 1 "Henry Jonathan \"Hank\" Pym"     1 "yes"
+    ## 2 "Henry Jonathan \"Hank\" Pym"     2 ""   
+    ## 3 "Henry Jonathan \"Hank\" Pym"     3 ""   
+    ## 4 "Henry Jonathan \"Hank\" Pym"     4 ""   
+    ## 5 "Henry Jonathan \"Hank\" Pym"     5 ""   
+    ## 6 "Janet van Dyne"                  1 "yes"
+
+``` r
+#retruns
+returns <- av %>%
+  select(Name.Alias, starts_with("Return")) %>%
+  pivot_longer(
+    cols = starts_with("Return"),
+    names_to = "Time",
+    values_to = "Return"
+  ) %>%
+  mutate(
+    Time = parse_number(Time),
+    Return = case_when(
+      Return == "YES" ~ "yes",
+      Return == "NO"  ~ "no",
+      TRUE ~ ""
+    ),
+    Return = factor(Return, levels = c("yes", "no", ""))
+  )
+
+head(returns)
+```
+
+    ## # A tibble: 6 × 3
+    ##   Name.Alias                     Time Return
+    ##   <chr>                         <dbl> <fct> 
+    ## 1 "Henry Jonathan \"Hank\" Pym"     1 "no"  
+    ## 2 "Henry Jonathan \"Hank\" Pym"     2 ""    
+    ## 3 "Henry Jonathan \"Hank\" Pym"     3 ""    
+    ## 4 "Henry Jonathan \"Hank\" Pym"     4 ""    
+    ## 5 "Henry Jonathan \"Hank\" Pym"     5 ""    
+    ## 6 "Janet van Dyne"                  1 "yes"
+
+``` r
+# average number of deaths
+avg_deaths <- deaths %>%
+  group_by(Name.Alias) %>%
+  summarise(num_deaths = sum(Death == "yes")) %>%
+  summarise(avg_num_deaths = mean(num_deaths))
+
+avg_deaths
+```
+
+    ## # A tibble: 1 × 1
+    ##   avg_num_deaths
+    ##            <dbl>
+    ## 1          0.546
+
+The average number of deaths per Avenger is approximately 0.546. This
+means that, on average, each Avenger has died a little more than half a
+time based on the recorded data.
+
 ### Include your answer
 
 Include at least one sentence discussing the result of your
@@ -102,3 +201,48 @@ fact-checking endeavor.
 
 Upload your changes to the repository. Discuss and refine answers as a
 team.
+
+The proportion of Avengers who return after dying is approximately 0.64.
+Since this is greater than 0.5, it shows that most Avengers do return
+after dying. Therefore, the statement is supported by the data.
+
+``` r
+library(tidyverse)
+library(readr)
+
+# Add ID to match rows
+av2 <- av %>% mutate(id = row_number())
+
+# deaths long
+deaths_long <- av2 %>%
+  select(id, starts_with("Death")) %>%
+  pivot_longer(
+    cols = starts_with("Death"),
+    names_to = "Time",
+    values_to = "Death"
+  ) %>%
+  mutate(Time = parse_number(Time))
+
+# returns long
+returns_long <- av2 %>%
+  select(id, starts_with("Return")) %>%
+  pivot_longer(
+    cols = starts_with("Return"),
+    names_to = "Time",
+    values_to = "Return"
+  ) %>%
+  mutate(Time = parse_number(Time))
+
+# join and analyze
+result <- deaths_long %>%
+  left_join(returns_long, by = c("id", "Time")) %>%
+  filter(Death == "YES") %>%
+  summarise(prop_returned = mean(Return == "YES", na.rm = TRUE))
+
+result
+```
+
+    ## # A tibble: 1 × 1
+    ##   prop_returned
+    ##           <dbl>
+    ## 1         0.640
